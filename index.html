@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Chat</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="chat-container">
+        <div class="sidebar">
+            <div class="profile">
+                <div class="profile-icon">A</div>
+                <div class="profile-name">Anoop</div>
+            </div>
+            <input type="text" id="search-contacts" placeholder="Search contacts..." onkeyup="searchContacts()">
+            <ul id="contacts-list">
+                <!-- Placeholder for contacts. They'll be added dynamically from JavaScript -->
+            </ul>
+        </div>
+        <div class="chat-area">
+            <header class="chat-header" id="selected-contact">Select a contact</header>
+            <div class="messages"></div>
+            <div class="chat-footer">
+                <input type="text" class="chat-input" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
+                <button class="send-btn" onclick="sendMessage()">&#8594;</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io.connect('http://localhost:3000');
+        const contacts = ['The Rock', 'Kane', 'Undertaker', 'Triple H', 'Stone Cold Steve Austin'];
+        let currentChatUser = null;
+        let chatHistory = {};
+
+        // Populating contact list
+        const contactsList = document.getElementById('contacts-list');
+        contacts.forEach(contact => {
+            let contactElem = document.createElement('li');
+            contactElem.innerHTML = `
+                <div class="contact-icon">${contact[0]}</div>
+                <div class="contact-name">${contact}</div>
+            `;
+            contactElem.addEventListener('click', () => selectChat(contact));
+            contactsList.appendChild(contactElem);
+        });
+
+        function selectChat(user) {
+            currentChatUser = user;
+            document.getElementById('selected-contact').textContent = user;
+            const messagesDiv = document.querySelector('.messages');
+            messagesDiv.innerHTML = chatHistory[user] || '';
+        }
+
+        function sendMessage() {
+            const message = document.querySelector('.chat-input').value;
+            if (!currentChatUser || !message.trim()) return;
+
+            const data = { user: 'Anoop', message: message };
+            socket.emit('send message', data);
+            appendMessage(data, 'sent');
+            document.querySelector('.chat-input').value = '';  // clear the input field
+        }
+
+        socket.on('receive message', function(data) {
+            appendMessage(data, 'received');
+        });
+
+        function appendMessage(data, messageType) {
+            const messagesDiv = document.querySelector('.messages');
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', messageType);
+            messageElement.textContent = (messageType === 'received' ? data.user + ": " : "") + data.message;
+            messagesDiv.appendChild(messageElement);
+
+            if (!chatHistory[currentChatUser]) chatHistory[currentChatUser] = '';
+            chatHistory[currentChatUser] += messageElement.outerHTML;
+        }
+
+        function handleKeyPress(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {  // Checks if Enter key is pressed without the Shift key
+        e.preventDefault();  // Prevents adding a new line in the input
+        sendMessage();
+    }
+}
+
+        function searchContacts() {
+            let input, filter, ul, li, i, txtValue;
+            input = document.getElementById('search-contacts');
+            filter = input.value.toUpperCase();
+            ul = document.getElementById("contacts-list");
+            li = ul.getElementsByTagName('li');
+
+            for (i = 0; i < li.length; i++) {
+                txtValue = li[i].textContent || li[i].innerText;
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    li[i].style.display = "";
+                } else {
+                    li[i].style.display = "none";
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
