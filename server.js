@@ -8,28 +8,31 @@ const io = socketIo(server);
 
 app.use(express.static(__dirname));
 
-const emojiMap = {
-    'hey': '👋',
-    'lol': '😂',
-    'like': '👍',
-    'congratulations': '🎉',
-    'react': '⚛️' // Using the atom symbol to represent React.js
-};
+// Function to replace words with emojis
+function replaceWordsWithEmojis(text) {
+    const emojiMap = {
+        'react': '⚛️',
+        'hey': '👋',
+        'lol': '😂',
+        'like': '👍',
+        'congratulations': '🎉'
+    };
 
-function replaceWithEmojis(message) {
-    for (const [text, emoji] of Object.entries(emojiMap)) {
-        const regex = new RegExp(`\\b${text}\\b`, 'gi'); // Matches the word using word boundaries and ignoring case
-        message = message.replace(regex, emoji);
-    }
-    return message;
+    return text.replace(/\b(react|hey|lol|like|congratulations)\b/gi, (matched) => {
+        return emojiMap[matched.toLowerCase()] || matched;
+    });
 }
 
 io.on('connection', (socket) => {
     console.log('a user connected');
 
     socket.on('send message', (data) => {
-        data.message = replaceWithEmojis(data.message); // Replace text with emojis
-        // Broadcast to all clients including the sender
+        console.log('Message received', data);
+        
+        // Replace certain words with emojis before broadcasting
+        data.message = replaceWordsWithEmojis(data.message);
+
+        // Broadcast to all clients
         io.emit('receive message', data);
     });
 
